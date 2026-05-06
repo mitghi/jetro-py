@@ -1,0 +1,41 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "jetro"
+version = "0.1.0"
+description = "Query, shape, and patch JSON in one expression — at Rust speed."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [
+    { name = "Milad (Mike) Taghavi", email = "mitghi@me.com" },
+]
+keywords = ["json", "json-query", "jsonpath", "query-language", "dsl", "rust"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup",
+]
+
+[project.urls]
+Homepage = "https://github.com/mitghi/jetro-py"
+Repository = "https://github.com/mitghi/jetro-py"
+Issues = "https://github.com/mitghi/jetro-py/issues"
+
+[tool.maturin]
+# Mixed Python/Rust layout: the compiled extension is placed inside the
+# `python/jetro/` package as `_jetro`, alongside the pure-Python
+# `__init__.py` re-export and the `.pyi` type stubs.
+python-source = "python"
+module-name = "jetro._jetro"
+features = ["pyo3/extension-module"]

@@ -1,0 +1,26 @@
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Maturin / wheels
+/dist
+/build
+/wheels
+*.egg-info/
+.eggs/
+*.whl
+
+# Editors
+.idea/
+.vscode/
+.DS_Store

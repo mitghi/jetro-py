@@ -1,0 +1,22 @@
+[package]
+name = "jetro-py"
+version = "0.1.0"
+edition = "2021"
+authors = ["Milad (Mike) Taghavi <mitghi.at.me.com>"]
+license = "MIT"
+description = "Python bindings for jetro — a JSON query, transform, and patch DSL"
+repository = "https://github.com/mitghi/jetro-py"
+publish = false
+
+[lib]
+name = "_jetro"
+crate-type = ["cdylib"]
+
+[dependencies]
+# Local path during development; switch to a `version = "..."` registry
+# dependency once `jetro-core` is published to crates.io. Both paths
+# expose the same public surface (`Jetro`, `JetroEngine`, `EvalError`,
+# `JetroEngineError`).
+jetro-core = { path = "../jetro/jetro-core" }
+serde_json = "1.0"
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
