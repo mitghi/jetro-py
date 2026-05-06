@@ -1,0 +1,7 @@
+# Comparison libraries for benches/compare.py.
+# `jetro` itself is installed by `maturin develop` from the workspace
+# Cargo manifest, not from PyPI, so it is not listed here.
+jmespath>=1.0
+jsonpath-ng>=1.6
+glom>=23
+jq>=1.0
