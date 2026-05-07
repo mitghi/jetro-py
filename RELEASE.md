@@ -46,7 +46,7 @@ The workflow then:
 1. Builds wheels in parallel:
    - linux x86_64 (`manylinux2014`)
    - linux aarch64 (`manylinux2014`, QEMU on x86 runner)
-   - macOS universal2 (x86_64 + aarch64)
+   - macOS aarch64 (Apple Silicon native; runs on `macos-14`)
    - windows x86_64
 2. Builds the source distribution (`sdist`).
 3. Waits for any required reviewers on the `release` environment.
