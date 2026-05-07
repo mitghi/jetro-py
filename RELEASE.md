@@ -44,8 +44,8 @@ git push origin main v0.1.0
 The workflow then:
 
 1. Builds wheels in parallel:
-   - linux x86_64 (`manylinux2014`)
-   - linux aarch64 (`manylinux2014`, QEMU on x86 runner)
+   - linux x86_64 (`manylinux_2_28`)
+   - linux aarch64 (`manylinux_2_28`, native arm64 runner — `ubuntu-24.04-arm`)
    - macOS aarch64 (Apple Silicon native; runs on `macos-14`)
    - windows x86_64
 2. Builds the source distribution (`sdist`).

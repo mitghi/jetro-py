@@ -9,12 +9,9 @@ permissions:
   contents: read
 
 jobs:
-  linux:
-    name: build wheel — linux ${{ matrix.target }}
+  linux-x86_64:
+    name: build wheel — linux x86_64
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [x86_64, aarch64]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,12 +19,39 @@ jobs:
           python-version: "3.12"
       - uses: PyO3/maturin-action@v1
         with:
-          target: ${{ matrix.target }}
-          manylinux: "2014"
+          target: x86_64
+          # `manylinux_2_28` ships GCC 12 with full C11 / __has_include
+          # / <stdatomic.h> support, which the CRoaring sources pulled
+          # in by jetro-experimental need. The older `2014` image lacks
+          # those headers in its cross-compile toolchain and breaks the
+          # build.
+          manylinux: "2_28"
           args: --release --out dist
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-linux-${{ matrix.target }}
+          name: wheels-linux-x86_64
+          path: dist
+
+  linux-aarch64:
+    name: build wheel — linux aarch64 (native arm64)
+    # Use GitHub's native arm64 Linux runner instead of cross-
+    # compiling under QEMU. Avoids the cross-toolchain header gap
+    # that caused CRoaring to fail with `stdatomic.h: No such file
+    # or directory` on the manylinux2014 cross builder.
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: aarch64
+          manylinux: "2_28"
+          args: --release --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-aarch64
           path: dist
 
   macos-aarch64:
@@ -80,7 +104,7 @@ jobs:
 
   publish:
     name: publish to PyPI (trusted publisher)
-    needs: [linux, macos-aarch64, windows, sdist]
+    needs: [linux-x86_64, linux-aarch64, macos-aarch64, windows, sdist]
     runs-on: ubuntu-latest
     # Optional: gate the publish step behind a protected GitHub
     # environment (PyPI's trusted-publisher form prompts for it).
