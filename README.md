@@ -4,7 +4,7 @@
 
 Python bindings for [`jetro`](https://github.com/mitghi/jetro), a JSON
 query, transform, and patch DSL. Filter, project, group, aggregate,
-write back to deeply nested data, and pattern-match — all in a single
+write back to deeply nested data, and pattern-match, all in a single
 expression. Streaming with demand propagation, structural bitmap index
 for deep search, and a complete patch surface (`.set` / `.modify` /
 `.delete`).
@@ -68,7 +68,7 @@ j.collect("""
 
 ## Performance
 
-`jetro` outperforms every comparable Python JSON DSL on the same
+`jetro` outperforms several comparable Python JSON DSL on the same
 queries, and matches or beats hand-rolled Python on compound
 workloads. Numbers below are median wall-clock per iteration on a
 403 KB JSON document with 1000 users and ~5–50 orders each. Each
@@ -91,9 +91,6 @@ against the same document.
 | group users by role, count | **73 µs** | n/a | n/a | 20 610 µs | 68 µs |
 | users with any open order ≥ 50 | **2 601 µs** | 14 642 µs | 816 µs\* | 28 032 µs | 379 µs |
 
-\* jsonpath-ng's filter compiler happens to vectorise this single
-  query; it is 10–100× slower than jetro on every other workload.
-
 The `glom (py)` column is hand-written Python list / generator
 expressions over an already-parsed `dict`, included as a "no DSL,
 maximum-speed Python" reference.
@@ -102,9 +99,9 @@ maximum-speed Python" reference.
 
 Every iteration re-parses the raw bytes, then runs the query. Mirrors
 the typical web-server pattern of "receive JSON request, run query,
-return result" where parse cost dominates. jetro's simd-json
+return result" where parse cost dominates. jetro's [simd-json](https://github.com/simd-lite/simd-json)
 bytes→tape parser is several times faster than `json.loads`, so the
-gap to every other library widens substantially.
+gap to several other library widens substantially.
 
 | Workload | jetro | jmespath | jsonpath-ng | pyjq | glom (py) |
 |----------|------:|---------:|------------:|-----:|----------:|
@@ -114,7 +111,7 @@ gap to every other library widens substantially.
 
 In the cold path jetro is **~6× faster than hand-rolled Python** and
 **7–46× faster than every other DSL** because parse cost dominates
-and simd-json beats `json.loads` by a wide margin.
+and [simd-json](https://github.com/simd-lite/simd-json) beats `json.loads` by a wide margin.
 
 Reproduce with:
 
