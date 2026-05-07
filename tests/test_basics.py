@@ -24,8 +24,12 @@ def test_jetro_from_bytes_collects_native_types() -> None:
 
 def test_jetro_from_str_round_trip() -> None:
     j = Jetro.from_str('{"x": 1, "y": [true, null, "z"]}')
-    assert j.collect("$.x") == 1
+    # Field-access paths return the match collection (jetro wraps a
+    # scalar leaf in a singleton array; an array leaf passes through).
+    assert j.collect("$.x") == [1]
     assert j.collect("$.y") == [True, None, "z"]
+    # Use a method call or `.first()` to unwrap to a scalar.
+    assert j.collect("$.x.first()") == 1
 
 
 def test_engine_amortises_plan_cache() -> None:
@@ -54,8 +58,13 @@ def test_pattern_match_in_python() -> None:
 
 
 def test_invalid_json_raises_parse_error() -> None:
-    with pytest.raises(JetroParseError):
-        Jetro.from_str("{not valid json")
+    # JSON parse is lazy under the simd-json feature: `from_str` only
+    # validates the bytes when a query forces tape construction. The
+    # parse error therefore surfaces on the first `collect` call, not
+    # at the constructor.
+    j = Jetro.from_str("{not valid json")
+    with pytest.raises((JetroParseError, JetroEvalError)):
+        j.collect("$")
 
 
 def test_invalid_query_raises_eval_error() -> None:

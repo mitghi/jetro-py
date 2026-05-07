@@ -13,10 +13,6 @@ name = "_jetro"
 crate-type = ["cdylib"]
 
 [dependencies]
-# Local path during development; switch to a `version = "..."` registry
-# dependency once `jetro-core` is published to crates.io. Both paths
-# expose the same public surface (`Jetro`, `JetroEngine`, `EvalError`,
-# `JetroEngineError`).
-jetro-core = { path = "../jetro/jetro-core" }
+jetro-core = "0.5.2"
 serde_json = "1.0"
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
