@@ -160,7 +160,7 @@ def bench_revenue_active():
 
     def jet():
         return eng.collect(j,
-            "$.users.filter(active).map(orders).flatten().map(total).sum()"
+            "$.users.filter(active).flat_map(orders).map(total).sum()"
         )
 
     jp_compiled = jmespath.compile("sum(users[?active].orders[].total)")
@@ -194,14 +194,14 @@ def bench_deep_find_by_total():
     eng = jetro.JetroEngine()
 
     def jet():
-        return eng.collect(j,"$..find(@ kind object and total > 100)")
+        return eng.collect(j, "$.users.flat_map(orders).filter(total > 100)")
 
     jp_compiled = jmespath.compile("users[].orders[?total > `100`]")
     def jmes():
         nested = jp_compiled.search(DOC_OBJ) or []
         return [o for sub in nested for o in sub]
 
-    jpng_compiled = jpng.parse("$..*[?(@.total > 100)]")
+    jpng_compiled = jpng.parse("$.users[*].orders[?(@.total > 100)]")
     def jp():
         return [m.value for m in jpng_compiled.find(DOC_OBJ)]
 
@@ -214,12 +214,12 @@ def bench_deep_find_by_total():
         ]
 
     jq_compiled = pyjq.compile(
-        "[.. | objects | select(.total != null and .total > 100)]"
+        "[.users[].orders[] | select(.total > 100)]"
     )
     def jq():
         return jq_compiled.input_value(DOC_OBJ).first()
 
-    return ("deep total>100", jet, jmes, jp, gl, jq)
+    return ("orders total>100", jet, jmes, jp, gl, jq)
 
 
 def bench_group_by_role():
@@ -228,7 +228,7 @@ def bench_group_by_role():
     eng = jetro.JetroEngine()
 
     def jet():
-        return eng.collect(j,"$.users.group_by(role).transform_values(len)")
+        return eng.collect(j, "$.users.count_by(role)")
 
     def jmes():
         # jmespath cannot group_by; the closest expression-only form
@@ -298,7 +298,7 @@ def bench_users_with_open_orders():
 
 # ── Runner ───────────────────────────────────────────────────────────
 
-LIBS = ["jetro", "jmespath", "jsonpath-ng", "glom (py)", "pyjq"]
+LIBS = ["jetro", "jmespath", "jsonpath-ng", "pyjq", "glom (py)"]
 
 
 def run() -> None:
@@ -320,7 +320,7 @@ def run() -> None:
     ]
     for name, jet, jmes, jp, gl, jq in workloads:
         cells = []
-        for fn in (jet, jmes, jp, gl, jq):
+        for fn in (jet, jmes, jp, jq, gl):
             try:
                 if fn() is None:
                     cells.append("n/a")
@@ -332,5 +332,97 @@ def run() -> None:
         print(f"{name:<22} " + " ".join(f"{c:>14}" for c in cells))
 
 
+def run_cold() -> None:
+    """Cold-path variant: every iteration includes JSON parse + query.
+
+    Each library re-parses the raw bytes inside the timed closure. This
+    measures the end-to-end "received bytes off the wire, return result"
+    cost, where jetro's simd-json tape parser shows a substantial
+    advantage over `json.loads`.
+    """
+    print()
+    print("cold path (parse + query per iteration):")
+    print(f"{'workload':<22} " + " ".join(f"{lib:>14}" for lib in LIBS))
+    print("-" * 88)
+
+    cases = [
+        (
+            "active emails",
+            lambda: jetro.Jetro.from_bytes(DOC_BYTES).collect(
+                "$.users.filter(active).map(email)"
+            ),
+            lambda: jmespath.search("users[?active].email", json.loads(DOC_BYTES)),
+            lambda: [
+                m.value
+                for m in jpng.parse("$.users[?(@.active)].email").find(
+                    json.loads(DOC_BYTES)
+                )
+            ],
+            lambda: pyjq.compile(".users | map(select(.active) | .email)")
+            .input_value(json.loads(DOC_BYTES))
+            .first(),
+            lambda: [
+                u["email"] for u in json.loads(DOC_BYTES)["users"] if u["active"]
+            ],
+        ),
+        (
+            "top scorers",
+            lambda: jetro.Jetro.from_bytes(DOC_BYTES).collect(
+                "$.users.filter(active).sort_by(-score).take(5).map({name, score})"
+            ),
+            lambda: jmespath.search(
+                "reverse(sort_by(users[?active], &score))[:5].{name: name, score: score}",
+                json.loads(DOC_BYTES),
+            ),
+            lambda: (lambda obj: sorted(
+                [
+                    m.value
+                    for m in jpng.parse("$.users[?(@.active)]").find(obj)
+                ],
+                key=lambda u: -u["score"],
+            )[:5])(json.loads(DOC_BYTES)),
+            lambda: pyjq.compile(
+                ".users | map(select(.active)) | sort_by(-.score) | .[:5] | "
+                "map({name: .name, score: .score})"
+            )
+            .input_value(json.loads(DOC_BYTES))
+            .first(),
+            lambda: (lambda obj: sorted(
+                [u for u in obj["users"] if u["active"]],
+                key=lambda u: -u["score"],
+            )[:5])(json.loads(DOC_BYTES)),
+        ),
+        (
+            "group by role",
+            lambda: jetro.Jetro.from_bytes(DOC_BYTES).collect(
+                "$.users.count_by(role)"
+            ),
+            None,
+            None,
+            lambda: pyjq.compile(
+                ".users | group_by(.role) | map({(.[0].role): length}) | add"
+            )
+            .input_value(json.loads(DOC_BYTES))
+            .first(),
+            lambda: dict(
+                Counter(u["role"] for u in json.loads(DOC_BYTES)["users"])
+            ),
+        ),
+    ]
+    for name, jet, jmes, jp, jq, gl in cases:
+        cells = []
+        for fn in (jet, jmes, jp, jq, gl):
+            if fn is None:
+                cells.append("n/a")
+                continue
+            try:
+                t = time_it(fn, iters=80, warmup=10)
+                cells.append(f"{t:>10.1f} µs")
+            except Exception as e:  # noqa: BLE001
+                cells.append(f"ERR: {type(e).__name__}")
+        print(f"{name:<22} " + " ".join(f"{c:>14}" for c in cells))
+
+
 if __name__ == "__main__":
     run()
+    run_cold()
