@@ -19,6 +19,11 @@ Wheels are published for CPython 3.9+ on linux (x86_64, aarch64),
 macOS (universal2), and windows (x86_64). Building from source
 requires a Rust toolchain.
 
+## Learn
+
+The [jetro book](https://mitghi.github.io/jetro-book/) is the best
+place to start. It includes examples and valuable details throughout.
+
 ## Quickstart
 
 ```python
