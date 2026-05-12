@@ -32,6 +32,8 @@ fn map_engine_err(err: CoreJetroEngineError) -> PyErr {
     match err {
         CoreJetroEngineError::Json(e) => JetroParseError::new_err(e.to_string()),
         CoreJetroEngineError::Eval(e) => JetroEvalError::new_err(e.to_string()),
+        CoreJetroEngineError::Ndjson(e) => JetroParseError::new_err(e.to_string()),
+        CoreJetroEngineError::Io(e) => JetroError::new_err(e.to_string()),
     }
 }
 
